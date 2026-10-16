@@ -54,6 +54,16 @@ bool AddPath(const char *newPath)
 bool AddFilePath(const char *name)
 {
     const char* end = strrchr(name, DIR_SEP);
+#if defined(WIN32)
+    // '/' separates directories on Windows too, and make, MSYS2 and most
+    // build tools pass it: without this, "dir/file.spin" did not add "dir"
+    // to the include path and its #include files were not found
+    const char* slash = strrchr(name, '/');
+    if (slash && (!end || slash > end))
+    {
+        end = slash;
+    }
+#endif
     if (!end)
     {
         return false;
