@@ -145,6 +145,7 @@
     <ClCompile Include="CompileInstruction.cpp" />
     <ClCompile Include="CompileSpin.cpp" />
     <ClCompile Include="CompileUtilities.cpp" />
+    <ClCompile Include="DebugInfo.cpp" />
     <ClCompile Include="DistillObjects.cpp" />
     <ClCompile Include="Elementizer.cpp" />
     <ClCompile Include="ErrorStrings.cpp" />
@@ -163,6 +164,7 @@
   <ItemGroup>
     <ClInclude Include="CompileSpin.h" />
     <ClInclude Include="CompileUtilities.h" />
+    <ClInclude Include="DebugInfo.h" />
     <ClInclude Include="Elementizer.h" />
     <ClInclude Include="ErrorStrings.h" />
     <ClInclude Include="flexbuf.h" />
