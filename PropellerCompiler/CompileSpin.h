@@ -28,6 +28,7 @@ struct CompilerConfig
         , bDocMode(false)
         , bDATonly(false)
         , bBinary(true)
+        , bDebugInfo(false)
         , eeprom_size(32768)
     {
     }
@@ -43,6 +44,7 @@ struct CompilerConfig
     bool bDocMode;
     bool bDATonly;
     bool bBinary;
+    bool bDebugInfo;            // collect debugging information (GetDebugInfo)
     unsigned int eeprom_size;
 };
 
@@ -50,6 +52,9 @@ struct CompilerConfig
 void InitCompiler(CompilerConfig* pCompilerConfig, LoadFileFunc pLoadFileFunc, FreeFileBufferFunc pFreeFileBufferFunc);
 void SetDefine(const char* pName, const char* pValue);
 unsigned char* CompileSpin(char* pFilename, int* pnResultLength);
+// After CompileSpin with bDebugInfo: the debugging information's text
+// (see PropellerCompiler/DebugInfo.cpp)
+const char* GetDebugInfo();
 void ShutdownCompiler();
 
 #endif // _COMPILESPIN_H_

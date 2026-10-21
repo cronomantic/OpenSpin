@@ -52,6 +52,8 @@ usage: openspin\n\
          [ -M <size> ]          size of eeprom (up to 16777216 bytes)\n\
          [ -s ]                 dump PUB & CON symbol information for top object\n\
          [ -u ]                 enable unused method elimination\n\
+         [ -g ]                 also write debugging information (methods, locals,\n\
+                                lines of the bytecode) to the output with .dbg\n\
          <name.spin>            spin file to compile\n\
 \n");
 }
@@ -300,6 +302,10 @@ int main(int argc, char* argv[])
                 compilerConfig.bDumpSymbols = true;
                 break;
 
+            case 'g':
+                compilerConfig.bDebugInfo = true;
+                break;
+
             case 'u':
                 compilerConfig.bUnusedMethodElimination = true;
                 break;
@@ -433,6 +439,31 @@ int main(int argc, char* argv[])
         {
             fwrite(pBuffer, nLength, 1, pFile);
             fclose(pFile);
+        }
+        if (compilerConfig.bDebugInfo)
+        {
+            // the output's name with .dbg in place of its extension
+            char debugFilename[260];
+            strncpy(debugFilename, outputFilename, sizeof(debugFilename) - 5);
+            debugFilename[sizeof(debugFilename) - 5] = 0;
+            char* pDot = strrchr(debugFilename, '.');
+            char* pSlash = strrchr(debugFilename, '/');
+            char* pBackslash = strrchr(debugFilename, '\\');
+            if (pDot && (!pSlash || pDot > pSlash) && (!pBackslash || pDot > pBackslash))
+            {
+                *pDot = 0;
+            }
+            strcat(debugFilename, ".dbg");
+            FILE* pDebug = fopen(debugFilename, "wb");
+            if (pDebug)
+            {
+                fputs(GetDebugInfo(), pDebug);
+                fclose(pDebug);
+            }
+            else
+            {
+                printf("ERROR: cannot write %s\n", debugFilename);
+            }
         }
     }
     else

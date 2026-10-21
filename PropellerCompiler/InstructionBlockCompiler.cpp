@@ -20,6 +20,7 @@
 #include "Elementizer.h"
 #include "ErrorStrings.h"
 #include "CompileUtilities.h"
+#include "DebugInfo.h"
 
 //////////////////////////////////////////
 // declarations for internal functions
@@ -80,6 +81,7 @@ bool CompileBlock(int column)
             break;
         }
 
+        DebugInfo_Line(g_pCompilerData->obj_ptr, g_pCompilerData->source_start);
         if (g_pElementizer->GetType() == type_if)
         {
             if (!CompileBlock_IfOrIfNot(s_column, true))
@@ -214,6 +216,7 @@ bool CompileIfOrIfNot(int column, int param)
         }
         if (g_pElementizer->GetType() == type_elseif)
         {
+            DebugInfo_Line(g_pCompilerData->obj_ptr, g_pCompilerData->source_start);
             if (!CompileIfOrIfNot_ElseCondition(addressCount, 0x0A))
             {
                 return false;
@@ -221,6 +224,7 @@ bool CompileIfOrIfNot(int column, int param)
         }
         else if (g_pElementizer->GetType() == type_elseifnot)
         {
+            DebugInfo_Line(g_pCompilerData->obj_ptr, g_pCompilerData->source_start);
             if (!CompileIfOrIfNot_ElseCondition(addressCount, 0x0B))
             {
                 return false;
@@ -489,9 +493,11 @@ bool CompileBlock_Case(int column)
 }
 
 static bool s_bHasPost = false;
+static int s_blockSourcePos = 0;    // the line of the block OptimizeBlock compiles (debugging information)
 bool CompileRepeatPlain(int column, int param)
 {
     param = param; // stop warning
+    int repeatPos = s_blockSourcePos;
 
     BlockStack_Write(2, g_pCompilerData->obj_ptr); // set reverse address
     if (!s_bHasPost)
@@ -508,6 +514,7 @@ bool CompileRepeatPlain(int column, int param)
         return false;
     }
     unsigned char byteCode = 0x04;
+    int endPtr = g_pCompilerData->obj_ptr;
     if (!bEof)
     {
         s_column = g_pElementizer->GetColumn();
@@ -524,6 +531,8 @@ bool CompileRepeatPlain(int column, int param)
             {
                 s_bHasPost = true;
                 BlockStack_Write(0, g_pCompilerData->obj_ptr); // set post-while/until 'next' address
+                DebugInfo_Line(g_pCompilerData->obj_ptr, g_pCompilerData->source_start);
+                repeatPos = -1;
                 if (!CompileExpression()) // compile post-while/until expression
                 {
                     return false;
@@ -540,6 +549,10 @@ bool CompileRepeatPlain(int column, int param)
             }
         }
     }
+    if (repeatPos >= 0)
+    {
+        DebugInfo_Line(endPtr, repeatPos);
+    }
     if (!EnterObj(byteCode))
     {
         return false;
@@ -555,6 +568,7 @@ bool CompileRepeatPlain(int column, int param)
 
 bool CompileRepeatPreWhileOrUntil(int column, int param)
 {
+    int repeatPos = s_blockSourcePos;
     BlockStack_Write(0, g_pCompilerData->obj_ptr); // set 'next'/reverse address
     if (!CompileExpression()) // compile pre-while/until expression
     {
@@ -576,6 +590,7 @@ bool CompileRepeatPreWhileOrUntil(int column, int param)
     {
         return false;
     }
+    DebugInfo_Line(g_pCompilerData->obj_ptr, repeatPos);
     if (!EnterObj(0x04)) // (jmp)
     {
         return false;
@@ -591,6 +606,7 @@ bool CompileRepeatPreWhileOrUntil(int column, int param)
 bool CompileRepeatCount(int column, int param)
 {
     param = param; // stop warning
+    int repeatPos = s_blockSourcePos;
 
     if (!CompileExpression()) // compile count expression
     {
@@ -614,6 +630,7 @@ bool CompileRepeatCount(int column, int param)
         return false;
     }
     BlockStack_Write(0, g_pCompilerData->obj_ptr); // set 'next' address
+    DebugInfo_Line(g_pCompilerData->obj_ptr, repeatPos);
     if (!EnterObj(0x09)) // (djnz)
     {
         return false;
@@ -629,6 +646,7 @@ bool CompileRepeatCount(int column, int param)
 bool CompileRepeatVariable(int column, int param)
 {
     param = param; // stop warning
+    int repeatPos = s_blockSourcePos;
 
     unsigned char varType = 0;
     unsigned char varSize = 0;
@@ -705,6 +723,7 @@ bool CompileRepeatVariable(int column, int param)
             return false;
         }
         BlockStack_Write(0, g_pCompilerData->obj_ptr); // set 'next' address
+        DebugInfo_Line(g_pCompilerData->obj_ptr, repeatPos);
         if (!CompileOutOfSequenceExpression(savedSourcePtr)) // compile the step expression
         {
             return false;
@@ -719,6 +738,7 @@ bool CompileRepeatVariable(int column, int param)
             return false;
         }
         BlockStack_Write(0, g_pCompilerData->obj_ptr); // set 'next' address
+        DebugInfo_Line(g_pCompilerData->obj_ptr, repeatPos);
         byteCode = 0x02; // (repeat-var)
     }
     else
@@ -828,12 +848,15 @@ bool OptimizeBlock(int column, int param, bool (*pCompileFunction)(int, int))
 {
     int savedSourcePtr = g_pElementizer->GetSourcePtr();
     int savedObjPtr = g_pCompilerData->obj_ptr;
+    int blockPos = g_pCompilerData->source_start;
     int size = 0;
 
     for (;;)
     {
         g_pElementizer->SetSourcePtr(savedSourcePtr);
         g_pCompilerData->obj_ptr = savedObjPtr;
+        DebugInfo_Rewind(savedObjPtr);
+        s_blockSourcePos = blockPos;
 
         if (!(*pCompileFunction)(column, param))
         {

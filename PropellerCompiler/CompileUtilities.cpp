@@ -20,13 +20,17 @@
 #include "Elementizer.h"
 #include "ErrorStrings.h"
 #include "CompileUtilities.h"
+#include "DebugInfo.h"
 
 bool SkipBlock(int column)
 {
     int savedObjPtr = g_pCompilerData->obj_ptr;
     bool savedStringPatchEnable = g_pCompilerData->str_patch_enable;
     g_pCompilerData->str_patch_enable = false;
-    if (!CompileBlock(column))
+    DebugInfo_Suspend();
+    bool bOk = CompileBlock(column);
+    DebugInfo_Resume();
+    if (!bOk)
     {
         return false;
     }

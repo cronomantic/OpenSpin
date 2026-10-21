@@ -19,6 +19,11 @@ openspin.exe
 
 openspin.exe is a command line wrapper for the compiler library. You give it a spin file and it passes it through the compiler and produces a .binary (or optional .eeprom) file with the same base name as the passed in spin file. There are several [command line options](https://github.com/reltham/OpenSpin/wiki/CommandLine) available. Run openspin.exe with no arguments to get a usage description.
 
+Debugging information (-g)
+--------------------------
+
+With `-g`, openspin also writes a text file next to the output, with the output's name and the extension `.dbg`: for each object (by the absolute path of its source), its OBJ entries, its VAR (size, count and offset from vbase), its methods in table order (PUBs, then PRIs: index, PUB/PRI, the line of the declaration, the parameters, the result's name and the locals) and, for the bytecode, the source line of the code from each offset (bytes from the object's start) on. The output itself is the same as without `-g`. The format is described in `PropellerCompiler/DebugInfo.cpp`; a debugger finds the objects in a program by walking the object tables from the top object and naming them through the OBJ entries.
+
 Downloads
 ---------
 

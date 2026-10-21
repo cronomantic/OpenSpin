@@ -20,6 +20,7 @@
 #include "Elementizer.h"
 #include "ErrorStrings.h"
 #include "UnusedMethodUtils.h"
+#include "DebugInfo.h"
 
 //////////////////////////////////////////
 // declarations for internal functions
@@ -158,6 +159,7 @@ const char* Compile1()
 
 const char* Compile2()
 {
+    DebugInfo_BeginObject();
     if (!CompileObjSymbols())
     {
         return g_pCompilerData->error_msg;
@@ -170,6 +172,7 @@ const char* Compile2()
     {
         return g_pCompilerData->error_msg;
     }
+    DebugInfo_VarSizes(g_pCompilerData->var_long, g_pCompilerData->var_word);
     if (!CompileDatBlocks())
     {
         return g_pCompilerData->error_msg;
@@ -713,6 +716,7 @@ bool CompileObjBlocksId()
     g_pCompilerData->obj_count = 0;
     g_pCompilerData->obj_files = 0;
     g_pCompilerData->unused_obj_files = 0;
+    DebugInfo_ObjReset();
 
     bool bEof = false;
     g_pElementizer->Reset();
@@ -735,6 +739,7 @@ bool CompileObjBlocksId()
                 {
                     // save a copy of the symbol
                     g_pElementizer->BackupSymbol();
+                    DebugInfo_Name();
 
                     int instanceCount = 1;
 
@@ -813,6 +818,7 @@ bool CompileObjBlocksId()
 
                         // accumulate instances
                         g_pCompilerData->obj_instances[objFileIndex] += instanceCount;
+                        DebugInfo_Obj(g_pCompilerData->symbolBackup, instanceCount, &(g_pCompilerData->obj_filenames[objFileIndex<<8]));
                     }
                     else
                     {
@@ -1092,6 +1098,7 @@ bool CompileVarBlocks()
 
                         // save a copy of the symbol
                         g_pElementizer->BackupSymbol();
+                        DebugInfo_Name();
 
                         int nCount = 1;
 
@@ -1142,6 +1149,7 @@ bool CompileVarBlocks()
 
                         // add the symbol
                         g_pSymbolEngine->AddSymbol(g_pCompilerData->symbolBackup, (nSize == 0) ? type_var_byte : ((nSize == 1) ? type_var_word : type_var_long), nValue);
+                        DebugInfo_Var(g_pCompilerData->symbolBackup, 1 << nSize, nCount, nValue);
 #ifdef RPE_DEBUG
                         printf("var: %s %d (%d, %d)\n", g_pCompilerData->symbolBackup, nValue, nSize, nCount);
 #endif
@@ -1203,6 +1211,8 @@ bool CompileSubBlocks_Compile(int blockType, int &subCount, int &nMethodIndex)
 
                 int saved_inf_data2 = g_pCompilerData->source_start;
                 int saved_inf_data3 = g_pCompilerData->source_finish;
+                DebugInfo_Method(subCount + 1, blockType == block_pub, &g_pCompilerData->source[saved_inf_data2],
+                                 saved_inf_data3 - saved_inf_data2, saved_inf_data2);
 
                 // locals is tracking the number of bytes, so 4 per long
                 // we start at 4 because every sub has a result local
@@ -1222,8 +1232,10 @@ bool CompileSubBlocks_Compile(int blockType, int &subCount, int &nMethodIndex)
                         if (g_pElementizer->GetType() == type_undefined)
                         {
                             g_pElementizer->BackupSymbol();
+                            DebugInfo_Name();
 
                             g_pSymbolEngine->AddSymbol(g_pCompilerData->symbolBackup, type_loc_long, locals, 0, true); // add to temp symbols
+                            DebugInfo_Param(g_pCompilerData->symbolBackup);
 
                             g_pCompilerData->inf_start = g_pCompilerData->source_start;
                             g_pCompilerData->inf_finish = g_pCompilerData->source_finish;
@@ -1293,7 +1305,9 @@ bool CompileSubBlocks_Compile(int blockType, int &subCount, int &nMethodIndex)
                         // if we result symbol then add it to temp symbols
                         // we don't increment locals, because result local is already accounted for
                         g_pElementizer->BackupSymbol();
+                        DebugInfo_Name();
                         g_pSymbolEngine->AddSymbol(g_pCompilerData->symbolBackup, type_loc_long, 0, 0, true);
+                        DebugInfo_Result(g_pCompilerData->symbolBackup);
 #ifdef RPE_DEBUG
                         printf("result: %s %d\n", g_pCompilerData->symbolBackup, 0);
 #endif
@@ -1319,6 +1333,7 @@ bool CompileSubBlocks_Compile(int blockType, int &subCount, int &nMethodIndex)
                         if (g_pElementizer->GetType() == type_undefined)
                         {
                             g_pElementizer->BackupSymbol();
+                            DebugInfo_Name();
 
                             int sizeOfThisLocal = 4;
 
@@ -1342,6 +1357,7 @@ bool CompileSubBlocks_Compile(int blockType, int &subCount, int &nMethodIndex)
                             }
 
                             g_pSymbolEngine->AddSymbol(g_pCompilerData->symbolBackup, type_loc_long, locals, 0, true); // add to temp symbols
+                            DebugInfo_Local(g_pCompilerData->symbolBackup, sizeOfThisLocal / 4);
 #ifdef RPE_DEBUG
                             if (sizeOfThisLocal > 4)
                             {
@@ -1406,6 +1422,7 @@ bool CompileSubBlocks_Compile(int blockType, int &subCount, int &nMethodIndex)
                 }
                 else
                 {
+                    DebugInfo_DropMethod();
                     // just simple tracking of unused methods, maximum tracked amount works out to 1024 entries
                     if (g_pCompilerData->unused_methods < (32 * file_limit))
                     {

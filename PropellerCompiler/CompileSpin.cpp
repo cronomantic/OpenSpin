@@ -19,6 +19,7 @@
 #include "textconvert.h"
 #include "preprocess.h"
 #include "Utilities.h"
+#include "DebugInfo.h"
 
 #define ObjFileStackLimit   16
 #define ListLimit           2000000
@@ -361,6 +362,8 @@ static bool CompileRecursively(char* pFilename, int& nCompileIndex, ObjectNode* 
         PrintError(pFilename, pErrorString);
         return false;
     }
+    DebugInfo_EndObject(s_pCompilerData->current_file_path ? s_pCompilerData->current_file_path : pFilename,
+                        s_pCompilerData->source);
 
     // only do this check if UME is off or if it's the final compile when UME is on
     if (!s_compilerConfig.bUnusedMethodElimination || s_pCompilerData->bFinalCompile)
@@ -586,9 +589,16 @@ void InitCompiler(CompilerConfig* pCompilerConfig, LoadFileFunc pLoadFileFunc, F
     s_pLoadFileFunc = pLoadFileFunc;
     s_pFreeFileBufferFunc = pFreeFileBufferFunc;
 
+    DebugInfo_Enable(s_compilerConfig.bDebugInfo);
+
     pp_setFileFunctions(pLoadFileFunc, pFreeFileBufferFunc);
     pp_init(&s_preprocessor, s_compilerConfig.bAlternatePreprocessorMode);
     pp_setcomments(&s_preprocessor, "\'", "{", "}");
+}
+
+const char* GetDebugInfo()
+{
+    return DebugInfo_Text();
 }
 
 void SetDefine(const char* pName, const char* pValue)
@@ -611,6 +621,7 @@ unsigned char* CompileSpin(char* pFilename, int* pnResultLength)
     }
 
     int nOriginalSize = 0;
+    DebugInfo_Clear();
 
 restart_compile:
     s_pCompilerData = InitStruct();

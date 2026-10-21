@@ -35,6 +35,7 @@ OBJ=$(BUILD)/BlockNestStackRoutines.o \
 	$(BUILD)/CompileExpression.o \
 	$(BUILD)/CompileInstruction.o \
 	$(BUILD)/CompileUtilities.o \
+	$(BUILD)/DebugInfo.o \
 	$(BUILD)/DistillObjects.o \
 	$(BUILD)/Elementizer.o \
 	$(BUILD)/ErrorStrings.o \
